@@ -1,0 +1,10 @@
+{
+  "domain": "fnugg",
+  "name": "fnugg",
+  "documentation": "https://github.com/andreabl/homeassistant-fnugg",
+  "requirements": [],
+  "issue_tracker": "https://github.com/andreabl/homeassistant-fnugg/issues",
+  "version": "0.0.1",
+  "codeowners": ["@andreabl"],
+  "iot_class": "cloud_polling"
+}
