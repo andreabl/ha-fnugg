@@ -1,10 +1,14 @@
 {
   "domain": "fnugg",
-  "name": "fnugg",
-  "documentation": "https://github.com/andreabl/homeassistant-fnugg",
+  "name": "Fnugg",
+  "config_flow": true,
+  "documentation": "https://github.com/andreabl/ha-fnugg",
   "requirements": [],
-  "issue_tracker": "https://github.com/andreabl/homeassistant-fnugg/issues",
-  "version": "0.0.1",
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
   "codeowners": ["@andreabl"],
-  "iot_class": "cloud_polling"
+  "iot_class": "cloud_polling",
+  "version": "1.0.0"
 }

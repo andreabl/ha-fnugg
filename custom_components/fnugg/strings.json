@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Fnugg Resort",
+        "description": "Select a ski resort to monitor",
+        "data": {
+          "resort": "Select Resort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Fnugg API",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This resort is already configured"
+    }
+  }
+} 
