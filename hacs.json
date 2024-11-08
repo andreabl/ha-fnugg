@@ -10,5 +10,6 @@
     "codeowners": ["@andreabl"],
     "issue_tracker": "https://github.com/andreabl/ha-fnugg/issues",
     "version": "0.0.1",
-    "config_flow": false
+    "country": "NO",
+
 }
