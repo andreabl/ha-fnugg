@@ -28,7 +28,7 @@ async def get_resorts(hass: HomeAssistant) -> list[dict[str, str]]:
     
     try:
         _LOGGER.debug("Fetching resorts from Fnugg API")
-        async with session.get("https://api.fnugg.no/search") as resp:
+        async with session.get("https://api.fnugg.no/search?size=150") as resp:
             if resp.status != 200:
                 _LOGGER.error("Failed to get resorts. Status: %s", resp.status)
                 raise CannotConnect
