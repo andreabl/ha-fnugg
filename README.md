@@ -1,6 +1,6 @@
 # Home Assistant Fnugg Integration
 
-This custom integration allows you to add Fnugg weather data to your Home Assistant setup.
+This custom integration allows you to add Fnugg Ski Resort data  (https://fnugg.no/) into your Home Assistant setup. This code is experimental, but it Works for me(tm). 
 
 ## Installation via HACS
 
