@@ -31,7 +31,7 @@ To install this integration using Home Assistant Community Store (HACS), follow 
 
 ## Usage
 
-After installation and configuration, you can use the Fnugg integration to access weather data from Fnugg in your Home Assistant setup.
+After installation and configuration, you can use the Fnugg integration to access Ski resort information from Fnugg in your Home Assistant setup, such as weather information, ski lifts availability and resort opening times. 
 
 ## Support
 
