@@ -352,6 +352,16 @@ class FnuggData:
                         "extra_state_attributes": opening_hours,
                     }       
                 ),
+                "resort_open": (
+                    source.get("resort_open"),
+                    "resort_open",
+                    {"icon": "mdi:information"}
+                ),
+                "resort_open_override": (
+                    source.get("resort_open_override"),
+                    "resort_open_override",
+                    {"icon": "mdi:information"}
+                ),
             }
             # Add individual lift statuses
             lifts_detail = source.get("lifts", {}).get("list", [])
