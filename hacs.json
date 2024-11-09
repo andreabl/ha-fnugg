@@ -11,5 +11,5 @@
     "issue_tracker": "https://github.com/andreabl/ha-fnugg/issues",
     "version": "0.0.1",
     "country": "NO",
-
+    "icon": "custom_components/fnugg/logo.png"
 }

@@ -19,20 +19,6 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 
-#{% set direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N'] %}
-#{% set degree = states('sensor.wind_bearing')|float %}
-#{{ direction[((degree+11.25)/22.5)|int] }}
-#sensor:
-#  - platform: template
-#    sensors:
-#      your_wind_sensor:
-#        value_template: >
-#          {% set direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N'] %}
-#          {% set degree = states('sensor.wind_bearing')|float %}
-#          {{ direction[((degree+11.25)/22.5)|int] }}
-
-
-
 from .const import (
     LIFT_STATUS,
     SENSOR_TYPES,
@@ -48,7 +34,6 @@ from homeassistant.components.sensor import (
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "fnugg"
-
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Fnugg from a config entry."""
@@ -70,7 +55,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         dev.append(Fnugg(sensor_id, sensor_data, fnugg_data))
 
     async_add_entities(dev)
-
 
 class Fnugg(SensorEntity):
     """Representation of a Fnugg sensor."""
@@ -186,11 +170,13 @@ class FnuggData:
         self.sensors = {}
         self._timeout = 10
         self._updated_at = datetime.datetime.now()
+        _LOGGER.debug("FnuggData initialized for resort: %s", resort_name)
 
     async def update(self, _=None, force_update=False):
         now = datetime.datetime.now()
         elapsed = now - self._updated_at
         if elapsed < datetime.timedelta(minutes=20) and not force_update:
+            _LOGGER.debug("Skipping update, last update was %s minutes ago", elapsed.total_seconds() / 60)
             return
         self._updated_at = now
         await self.update_data()
@@ -201,8 +187,8 @@ class FnuggData:
             "accept": "application/json",
             "content-type": "application/json",
         }
-
         try:
+            _LOGGER.debug("Fetching data from Fnugg API for resort: %s", self._resort_name)
             with async_timeout.timeout(self._timeout):
                 resp = await self._session.get(
                     f"https://api.fnugg.no/get/resort/{self._resort_id}/",
@@ -231,18 +217,16 @@ class FnuggData:
             slopes_total = int(slopes.get("count", 0))
             slopes_open = int(slopes.get("open", 0))
             slopes_percentage = round((slopes_open / slopes_total * 100) if slopes_total > 0 else 0)
-
             contact_info = source.get("contact", "")
-
             _LOGGER.debug("Resort opening date: %s", source.get("resort_opening_date"))
-
             resort_opening_date = source.get("resort_opening_date", "")
             resort_closing_date = source.get("resort_closing_date", "")
             last_updated = source.get("last_updated", "")
-
             opening_hours = source.get("opening_hours", "")
-            resort_open = source.get("resort_open", "")
 
+            wind_direction = conditions.get("wind", {}).get("degree")
+            direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N']
+            wind_direction_text = direction[int((wind_direction+11.25)/22.5)]
             
             self.sensors = {
                 # Weather Conditions
@@ -257,9 +241,15 @@ class FnuggData:
                     {"icon": "mdi:weather-windy"}
                 ),
                 "wind_direction": (
-                    conditions.get("wind", {}).get("degree"),
+                    wind_direction,
                     "wind_direction",
                     {"icon": "mdi:compass"}
+                ),
+                "wind_direction_text": (
+                    wind_direction_text,
+                    "wind_direction_text",
+                    {"icon": "mdi:compass"}
+
                 ),
                 "condition_text": (
                     conditions.get("condition_description"),
@@ -322,6 +312,13 @@ class FnuggData:
                     "slopes_status_text",
                     {"icon": "mdi:ski"}
                 ),
+                
+                # Resort Info
+                "resort_status": (
+                    source.get("resort_status"),
+                    "resort_status",
+                    {"icon": "mdi:information"}
+                ),
                 "resort_opening_date": (
                     resort_opening_date,
                     "date",
@@ -346,7 +343,6 @@ class FnuggData:
                         "device_class": SensorDeviceClass.TIMESTAMP
                     }
                 ),
-
                 "opening_hours": (
                     "%s - %s" % (opening_hours[datetime.datetime.now().strftime("%A").lower()]["from"], 
                                 opening_hours[datetime.datetime.now().strftime("%A").lower()]["to"]),
@@ -356,17 +352,7 @@ class FnuggData:
                         "extra_state_attributes": opening_hours,
                     }       
                 ),
-                "resort_open": (
-                    resort_open,
-                    "boolean",
-                    {
-                        "icon": "mdi:information",
-                    }
-                ),
             }
-
-
-
             # Add individual lift statuses
             lifts_detail = source.get("lifts", {}).get("list", [])
             for lift in lifts_detail:
@@ -396,12 +382,16 @@ class FnuggData:
                         "lift_status",
                         attributes
                     )
-
+            _LOGGER.info("Data updated for resort: %s", self._resort_name)
             return True
             
         except aiohttp.ClientError as err:
-            _LOGGER.error("Error connecting to Fnugg: %s ", err, exc_info=True)
+            _LOGGER.error("Error connecting to Fnugg: %s", err, exc_info=True)
             raise
         except asyncio.TimeoutError:
+            _LOGGER.error("Timeout while connecting to Fnugg")
+            return False
+        except Exception as err:
+            _LOGGER.error("Unexpected error: %s", err, exc_info=True)
             return False
 
