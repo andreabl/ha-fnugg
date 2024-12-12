@@ -259,12 +259,12 @@ class FnuggData:
                 
                 # Snow Info
                 "snow_depth": (
-                    conditions.get("snow", {}).get("depth"),
+                    conditions.get("snow", {}).get("depth_slope"),
                     "snow_depth",
                     {"icon": "mdi:ruler"}
                 ),
                 "new_snow": (
-                    conditions.get("snow", {}).get("newsnow"),
+                    conditions.get("snow", {}).get("today"),
                     "new_snow",
                     {"icon": "mdi:snowflake"}
                 ),
