@@ -147,13 +147,15 @@ class Fnugg(SensorEntity):
         return self._attr_device_class
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
-        return {
-            "timestamp": datetime.datetime.fromisoformat(
-                self._fnugg_data.sensors[self._sensor_id][2].get("latestSample", "")
-            )
-        }
+        latest = self._fnugg_data.sensors.get(self._sensor_id, (None, None, {}))[2].get("latestSample")
+        if latest:
+            try:
+                return {"timestamp": datetime.datetime.fromisoformat(latest)}
+            except ValueError:
+                pass
+        return {}
 
     async def async_update(self):
         """Get the latest data."""
@@ -226,7 +228,7 @@ class FnuggData:
 
             wind_direction = conditions.get("wind", {}).get("degree")
             direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N']
-            wind_direction_text = direction[int((wind_direction+11.25)/22.5)]
+            wind_direction_text = direction[int((wind_direction+11.25)/22.5)] if wind_direction is not None else None
             
             self.sensors = {
                 # Weather Conditions
@@ -344,13 +346,14 @@ class FnuggData:
                     }
                 ),
                 "opening_hours": (
-                    "%s - %s" % (opening_hours[datetime.datetime.now().strftime("%A").lower()]["from"], 
-                                opening_hours[datetime.datetime.now().strftime("%A").lower()]["to"]),
+                    (lambda today: "%s - %s" % (today["from"], today["to"]))(
+                        opening_hours[datetime.datetime.now().strftime("%A").lower()]
+                    ) if isinstance(opening_hours, dict) and datetime.datetime.now().strftime("%A").lower() in opening_hours else None,
                     "hours",
                     {
                         "icon": "mdi:information",
                         "extra_state_attributes": opening_hours,
-                    }       
+                    }
                 ),
                 "resort_open": (
                     source.get("resort_open"),
