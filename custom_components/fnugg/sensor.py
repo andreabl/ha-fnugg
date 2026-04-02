@@ -174,6 +174,30 @@ class FnuggData:
         self._updated_at = datetime.datetime.now()
         _LOGGER.debug("FnuggData initialized for resort: %s", resort_name)
 
+    @staticmethod
+    def _get_todays_hours(opening_hours, exception_days):
+        today = datetime.date.today()
+        for exc in (exception_days or []):
+            try:
+                exc_date = datetime.datetime.fromisoformat(
+                    exc["date"].replace("Z", "+00:00")
+                ).date()
+            except (KeyError, ValueError):
+                continue
+            if exc_date == today:
+                if exc.get("closed"):
+                    return "Closed"
+                return f"{exc['from']} - {exc['to']}"
+        if not isinstance(opening_hours, dict):
+            return None
+        day_key = today.strftime("%A").lower()
+        day = opening_hours.get(day_key)
+        if not day:
+            return None
+        if day.get("closed"):
+            return "Closed"
+        return f"{day['from']} - {day['to']}"
+
     async def update(self, _=None, force_update=False):
         now = datetime.datetime.now()
         elapsed = now - self._updated_at
@@ -224,7 +248,8 @@ class FnuggData:
             resort_opening_date = source.get("resort_opening_date", "")
             resort_closing_date = source.get("resort_closing_date", "")
             last_updated = source.get("last_updated", "")
-            opening_hours = source.get("opening_hours", "")
+            opening_hours = source.get("opening_hours", {})
+            exception_days = opening_hours.get("exception_days", []) if isinstance(opening_hours, dict) else []
 
             wind_direction = conditions.get("wind", {}).get("degree")
             direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N']
@@ -346,13 +371,14 @@ class FnuggData:
                     }
                 ),
                 "opening_hours": (
-                    (lambda today: "%s - %s" % (today["from"], today["to"]))(
-                        opening_hours[datetime.datetime.now().strftime("%A").lower()]
-                    ) if isinstance(opening_hours, dict) and datetime.datetime.now().strftime("%A").lower() in opening_hours else None,
+                    self._get_todays_hours(opening_hours, exception_days),
                     "hours",
                     {
                         "icon": "mdi:information",
-                        "extra_state_attributes": opening_hours,
+                        "extra_state_attributes": {
+                            "schedule": opening_hours,
+                            "exception_days": exception_days,
+                        },
                     }
                 ),
                 "resort_open": (
