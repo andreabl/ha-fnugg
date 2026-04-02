@@ -342,7 +342,7 @@ class FnuggData:
                 
                 # Resort Info
                 "resort_status": (
-                    source.get("resort_status"),
+                    source.get("resort_status") or ("Open" if source.get("resort_open") else "Closed"),
                     "resort_status",
                     {"icon": "mdi:information"}
                 ),
