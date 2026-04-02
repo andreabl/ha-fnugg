@@ -248,8 +248,8 @@ class FnuggData:
             resort_opening_date = source.get("resort_opening_date", "")
             resort_closing_date = source.get("resort_closing_date", "")
             last_updated = source.get("last_updated", "")
-            opening_hours = source.get("opening_hours", "")
-            exception_days = source.get("exception_days", [])
+            opening_hours = source.get("opening_hours", {})
+            exception_days = opening_hours.get("exception_days", []) if isinstance(opening_hours, dict) else []
 
             wind_direction = conditions.get("wind", {}).get("degree")
             direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N']
