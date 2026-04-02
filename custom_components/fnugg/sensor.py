@@ -110,7 +110,7 @@ class Fnugg(SensorEntity):
         # Get the unit and device class from SENSOR_TYPES
         sensor_type = sensor[1]
         if sensor_type in SENSOR_TYPES:
-            self._attr_native_unit_of_measurement = SENSOR_TYPES[sensor_type][0]
+            self._attr_native_unit_of_measurement = SENSOR_TYPES[sensor_type][0] or None
             if SENSOR_TYPES[sensor_type][1]:
                 self._attr_device_class = SENSOR_TYPES[sensor_type][1]
                 _LOGGER.debug(
