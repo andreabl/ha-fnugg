@@ -97,7 +97,8 @@ class Fnugg(SensorEntity):
             "condition_description",
             "resort_opening_date",
             "resort_closing_date",
-            "facility_status"
+            "facility_status",
+            "blog_post_title",
         ]
         
         # Modify the state class logic
@@ -149,13 +150,22 @@ class Fnugg(SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
-        latest = self._fnugg_data.sensors.get(self._sensor_id, (None, None, {}))[2].get("latestSample")
+        sensor = self._fnugg_data.sensors.get(self._sensor_id, (None, None, {}))
+        raw_attrs = sensor[2] if len(sensor) > 2 else {}
+        attrs = {}
+
+        for key, value in raw_attrs.items():
+            if key not in ("icon", "device_class", "extra_state_attributes", "latestSample"):
+                attrs[key] = value
+
+        latest = raw_attrs.get("latestSample")
         if latest:
             try:
-                return {"timestamp": datetime.datetime.fromisoformat(latest)}
+                attrs["timestamp"] = datetime.datetime.fromisoformat(latest)
             except ValueError:
                 pass
-        return {}
+
+        return attrs
 
     async def async_update(self):
         """Get the latest data."""
@@ -392,6 +402,41 @@ class FnuggData:
                     {"icon": "mdi:information"}
                 ),
             }
+            # Fetch latest blog post for this resort
+            try:
+                with async_timeout.timeout(self._timeout):
+                    blog_resp = await self._session.get(
+                        f"https://api.fnugg.no/search?type=blog_post&facet=site:{self._resort_id}&sort=date:desc&size=1",
+                        headers=headers,
+                    )
+                if blog_resp.status == 200:
+                    blog_result = await blog_resp.json()
+                    blog_hits = blog_result.get("hits", {}).get("hits", [])
+                    if blog_hits:
+                        blog = blog_hits[0].get("_source", {})
+                        blog_title = blog.get("title", "").strip() or None
+                        blog_description = blog.get("description", "").strip() or None
+                        blog_date = blog.get("date")
+                        blog_author = blog.get("author", {}).get("name") or None
+                    else:
+                        blog_title = blog_description = blog_date = blog_author = None
+                else:
+                    blog_title = blog_description = blog_date = blog_author = None
+            except Exception as err:
+                _LOGGER.warning("Failed to fetch blog post: %s", err)
+                blog_title = blog_description = blog_date = blog_author = None
+
+            self.sensors["blog_post_title"] = (
+                blog_title,
+                "blog_post_title",
+                {
+                    "icon": "mdi:post",
+                    "description": blog_description,
+                    "date": blog_date,
+                    "author": blog_author,
+                },
+            )
+
             # Add individual lift statuses
             lifts_detail = source.get("lifts", {}).get("list", [])
             for lift in lifts_detail:
