@@ -316,6 +316,8 @@ class FnuggData:
             last_updated = source.get("last_updated", "")
             opening_hours = source.get("opening_hours", {})
             exception_days = opening_hours.get("exception_days", []) if isinstance(opening_hours, dict) else []
+            current_report = source.get("conditions", {}).get("current_report", {}).get("top", {})
+            images = source.get("images", {})
 
             wind_direction = conditions.get("wind", {}).get("degree")
             direction = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','N']
@@ -446,6 +448,16 @@ class FnuggData:
                             "exception_days": exception_days,
                         },
                     }
+                ),
+                "daily_report": (
+                    current_report.get("condition_description"),
+                    "text",
+                    {"icon": "mdi:note-text"},
+                ),
+                "resort_image": (
+                    images.get("image_full"),
+                    "text",
+                    {"icon": "mdi:image"},
                 ),
                 "next_event": (
                     self._get_next_event_text(opening_hours, exception_days),
