@@ -60,4 +60,7 @@ SENSOR_TYPES = {
     # Facility Status
     "facility_status": ["", None, False],
 
+    # Blog Post
+    "blog_post_title": ["", None, False],
+
 } 
