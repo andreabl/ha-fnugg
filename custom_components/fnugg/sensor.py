@@ -18,6 +18,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.const import (
     UnitOfTemperature,
 )
+from homeassistant.util import dt as dt_util
 
 from .const import (
     LIFT_STATUS,
@@ -197,6 +198,71 @@ class FnuggData:
         if day.get("closed"):
             return "Closed"
         return f"{day['from']} - {day['to']}"
+
+    @staticmethod
+    def _get_next_event_text(opening_hours, exception_days):
+        """Return human-readable time until next open/close event."""
+        now = dt_util.now()
+        today = now.date()
+
+        from_str = to_str = None
+        closed = False
+
+        for exc in (exception_days or []):
+            try:
+                exc_date = datetime.datetime.fromisoformat(
+                    exc["date"].replace("Z", "+00:00")
+                ).date()
+            except (KeyError, ValueError):
+                continue
+            if exc_date == today:
+                if exc.get("closed"):
+                    closed = True
+                else:
+                    from_str = exc.get("from")
+                    to_str = exc.get("to")
+                break
+        else:
+            if isinstance(opening_hours, dict):
+                day_key = today.strftime("%A").lower()
+                day = opening_hours.get(day_key)
+                if day:
+                    if day.get("closed"):
+                        closed = True
+                    else:
+                        from_str = day.get("from")
+                        to_str = day.get("to")
+
+        if closed or not from_str or not to_str:
+            return None
+
+        def parse_time(t):
+            h, m = map(int, t.split(":"))
+            return now.replace(hour=h, minute=m, second=0, microsecond=0, fold=0)
+
+        open_dt = parse_time(from_str)
+        close_dt = parse_time(to_str)
+
+        if now < open_dt:
+            delta = open_dt - now
+            label = "Opening"
+        elif now < close_dt:
+            delta = close_dt - now
+            label = "Closing"
+        else:
+            return None
+
+        total_minutes = int(delta.total_seconds() // 60)
+        hours, minutes = divmod(total_minutes, 60)
+
+        if hours > 0 and minutes > 0:
+            return f"{label} in {hours} hours and {minutes} minutes"
+        elif hours > 0:
+            return f"{label} in {hours} hours"
+        elif minutes > 0:
+            return f"{label} in {minutes} minutes"
+        else:
+            return f"{label} now"
 
     async def update(self, _=None, force_update=False):
         now = datetime.datetime.now()
@@ -380,6 +446,11 @@ class FnuggData:
                             "exception_days": exception_days,
                         },
                     }
+                ),
+                "next_event": (
+                    self._get_next_event_text(opening_hours, exception_days),
+                    "text",
+                    {"icon": "mdi:clock-outline"},
                 ),
                 "resort_open": (
                     source.get("resort_open"),
