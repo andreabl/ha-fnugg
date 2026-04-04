@@ -501,23 +501,39 @@ class FnuggData:
                         blog_description = blog.get("description", "").strip() or None
                         blog_date = blog.get("date")
                         blog_author = blog.get("author", {}).get("name") or None
+                        blog_images = blog.get("images", {})
                     else:
                         blog_title = blog_description = blog_date = blog_author = None
+                        blog_images = {}
                 else:
                     blog_title = blog_description = blog_date = blog_author = None
+                    blog_images = {}
             except Exception as err:
                 _LOGGER.warning("Failed to fetch blog post: %s", err)
                 blog_title = blog_description = blog_date = blog_author = None
+                blog_images = {}
+
+            blog_attrs = {
+                "icon": "mdi:post",
+                "description": blog_description,
+                "date": blog_date,
+                "author": blog_author,
+            }
+            if blog_images:
+                mobile = blog_images.get("mobile", {})
+                for scale, scale_data in mobile.items():
+                    if isinstance(scale_data, dict):
+                        for size, url in scale_data.items():
+                            blog_attrs[f"image_mobile_{scale}_{size}"] = url
+                for key in ("image_full", "image_1_1_l", "image_1_1_s",
+                            "image_16_9_m", "image_16_9_s", "image_16_9_xl", "image_16_9_xl_nc"):
+                    if key in blog_images:
+                        blog_attrs[key] = blog_images[key]
 
             self.sensors["blog_post_title"] = (
                 blog_title,
                 "blog_post_title",
-                {
-                    "icon": "mdi:post",
-                    "description": blog_description,
-                    "date": blog_date,
-                    "author": blog_author,
-                },
+                blog_attrs,
             )
 
             # Add individual lift statuses
