@@ -210,14 +210,8 @@ class FnuggData:
         return f"{day['from']} - {day['to']}"
 
     @staticmethod
-    def _get_next_event_text(opening_hours, exception_days):
-        """Return human-readable time until next open/close event."""
-        now = dt_util.now()
-        today = now.date()
-
-        from_str = to_str = None
-        closed = False
-
+    def _get_day_hours(opening_hours, exception_days, check_date):
+        """Return (from_str, to_str, closed) for a given date."""
         for exc in (exception_days or []):
             try:
                 exc_date = datetime.datetime.fromisoformat(
@@ -225,40 +219,79 @@ class FnuggData:
                 ).date()
             except (KeyError, ValueError):
                 continue
-            if exc_date == today:
+            if exc_date == check_date:
                 if exc.get("closed"):
-                    closed = True
-                else:
-                    from_str = exc.get("from")
-                    to_str = exc.get("to")
-                break
-        else:
-            if isinstance(opening_hours, dict):
-                day_key = today.strftime("%A").lower()
-                day = opening_hours.get(day_key)
-                if day:
-                    if day.get("closed"):
-                        closed = True
-                    else:
-                        from_str = day.get("from")
-                        to_str = day.get("to")
+                    return None, None, True
+                return exc.get("from"), exc.get("to"), False
+        if isinstance(opening_hours, dict):
+            day_key = check_date.strftime("%A").lower()
+            day = opening_hours.get(day_key)
+            if day:
+                if day.get("closed"):
+                    return None, None, True
+                return day.get("from"), day.get("to"), False
+        return None, None, False
 
+    @staticmethod
+    def _is_open(opening_hours, exception_days):
+        """Return True if the resort is currently open."""
+        now = dt_util.now()
+        from_str, to_str, closed = FnuggData._get_day_hours(
+            opening_hours, exception_days, now.date()
+        )
         if closed or not from_str or not to_str:
-            return None
-
-        def parse_time(t):
+            return False
+        def parse(t):
             h, m = map(int, t.split(":"))
             return now.replace(hour=h, minute=m, second=0, microsecond=0, fold=0)
+        return parse(from_str) <= now < parse(to_str)
 
-        open_dt = parse_time(from_str)
-        close_dt = parse_time(to_str)
+    @staticmethod
+    def _get_next_event_text(opening_hours, exception_days):
+        """Return human-readable time until next open/close event."""
+        now = dt_util.now()
+        today = now.date()
 
-        if now < open_dt:
-            delta = open_dt - now
-            label = "Opening"
-        elif now < close_dt:
-            delta = close_dt - now
+        def get_day_hours(check_date):
+            return FnuggData._get_day_hours(opening_hours, exception_days, check_date)
+
+        def parse_time_on_date(t, date):
+            h, m = map(int, t.split(":"))
+            return now.replace(
+                year=date.year, month=date.month, day=date.day,
+                hour=h, minute=m, second=0, microsecond=0, fold=0
+            )
+
+        def find_next_open():
+            """Find the next datetime the resort opens (today or future)."""
+            for days_ahead in range(0, 8):
+                check_date = today + datetime.timedelta(days=days_ahead)
+                from_str, _, closed = get_day_hours(check_date)
+                if not closed and from_str:
+                    open_dt = parse_time_on_date(from_str, check_date)
+                    if open_dt > now:
+                        return open_dt
+            return None
+
+        def find_next_close():
+            """Return today's close time if the resort is currently open, else None."""
+            from_str, to_str, closed = get_day_hours(today)
+            if not closed and from_str and to_str:
+                open_dt = parse_time_on_date(from_str, today)
+                close_dt = parse_time_on_date(to_str, today)
+                if open_dt <= now < close_dt:
+                    return close_dt
+            return None
+
+        next_open = find_next_open()
+        next_close = find_next_close()
+
+        if next_close and (next_open is None or next_close < next_open):
+            delta = next_close - now
             label = "Closing"
+        elif next_open:
+            delta = next_open - now
+            label = "Opening"
         else:
             return None
 
@@ -473,6 +506,11 @@ class FnuggData:
                     self._get_next_event_text(opening_hours, exception_days),
                     "text",
                     {"icon": "mdi:clock-outline"},
+                ),
+                "is_open": (
+                    self._is_open(opening_hours, exception_days),
+                    "is_open",
+                    {"icon": "mdi:door-open"},
                 ),
                 "resort_open": (
                     source.get("resort_open"),
