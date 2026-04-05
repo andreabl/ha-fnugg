@@ -538,6 +538,7 @@ class FnuggData:
                         blog_title = blog.get("title", "").strip() or None
                         blog_description = blog.get("description", "").strip() or None
                         blog_date = blog.get("date")
+                        blog_date_modified = blog.get("modified") or None
                         blog_author = blog.get("author", {}).get("name") or None
                         blog_images = blog.get("images", {})
                     else:
@@ -555,6 +556,7 @@ class FnuggData:
                 "icon": "mdi:post",
                 "description": blog_description,
                 "date": blog_date,
+                "date_modified": blog_date_modified,
                 "author": blog_author,
             }
             if blog_images:
